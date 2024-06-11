@@ -1,6 +1,6 @@
 [![Node.js CI](https://github.com/OpenLeverageDev/districtone-contracts/actions/workflows/build.yml/badge.svg)](https://github.com/OpenLeverageDev/openstage-contracts/actions/workflows/build.yml)
 
-# About District One
+# About DistrictOne (D1)
 Welcome to District One – your hub for Web3 social engagement where interaction sparks reward. Dive into a world where community and gamification converge, offering you a unique space to connect, share, and earn.
 
 District One has recently introduced the MEME token launch, a socially driven MEME fair launch platform. This platform enables the creation, distribution, and management of MEME tokens, enriching the ecosystem and providing more opportunities for users to engage and earn rewards.
