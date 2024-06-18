@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.21;
 
 contract MockUniV2Factory {
-
     // Mapping from token pairs to their pair addresses
     mapping(address => mapping(address => address)) private _pairs;
 

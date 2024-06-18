@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.21;
 
 library LaunchSignLib {
-
     uint256 public constant SIGN_FOR_PRESALE = 0;
     uint256 public constant SIGN_FOR_REFUND = 1;
     uint256 public constant SIGN_FOR_RESERVE = 2;
@@ -14,7 +13,7 @@ library LaunchSignLib {
         address inviter;
         uint256 timestamp;
         uint256 signType;
-     }
+    }
 
     function verify(SignedData memory signedData, bytes memory signature, address issuerAddress, uint256 validDuration) internal view returns (bool) {
         require(block.timestamp <= signedData.timestamp + validDuration, "Signature is expired");
@@ -23,6 +22,7 @@ library LaunchSignLib {
         bytes32 message = prefixed(dataHash);
 
         address signer = recoverSigner(message, signature);
+        require(signer != address(0), "invalid signature");
         return signer == issuerAddress;
     }
 

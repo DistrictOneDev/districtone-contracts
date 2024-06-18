@@ -1,11 +1,10 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.21;
 
 import "./MockUniV2Factory.sol";
 import {ERC20} from "@openzeppelin-5/contracts/token/ERC20/ERC20.sol";
 
 contract MockUniV2Router {
-
     MockUniV2Factory public factory;
 
     uint256 public minSwapReturn;
@@ -15,7 +14,8 @@ contract MockUniV2Router {
     function swapExactETHForTokens(
         uint256 minTokens,
         address[] calldata path,
-        address to, uint256 deadline
+        address to,
+        uint256 deadline
     ) external payable returns (uint256[] memory amounts) {
         path;
         deadline;
@@ -44,16 +44,15 @@ contract MockUniV2Router {
         return (amountTokenDesired, msg.value, amountTokenDesired + msg.value);
     }
 
-    function setFactory(address _factory) external{
+    function setFactory(address _factory) external {
         factory = MockUniV2Factory(_factory);
     }
 
-    function setMinSwapReturn(uint256 _minSwapReturn) external{
+    function setMinSwapReturn(uint256 _minSwapReturn) external {
         minSwapReturn = _minSwapReturn;
     }
 
-    function setMinTokensForAddLiquidity(uint256 _minTokensForAddLiquidity) external{
+    function setMinTokensForAddLiquidity(uint256 _minTokensForAddLiquidity) external {
         minTokensForAddLiquidity = _minTokensForAddLiquidity;
     }
-
 }

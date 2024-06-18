@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.21;
 
 library TokenVaultSignLib {
-
     uint256 public constant SIGN_FOR_DEPOSIT = 0;
     uint256 public constant SIGN_FOR_WITHDRAW = 1;
 
@@ -18,9 +17,9 @@ library TokenVaultSignLib {
         bytes32 dataHash = keccak256(abi.encodePacked(signedData.token, signedData.user, signedData.amount, signedData.nonce, signedData.signType));
         bytes32 message = prefixed(dataHash);
         address signer = recoverSigner(message, signature);
+        require(signer != address(0), "invalid signature");
         return signer == issuerAddress;
     }
-
 
     function recoverSigner(bytes32 message, bytes memory sig) internal pure returns (address) {
         (uint8 v, bytes32 r, bytes32 s) = splitSignature(sig);

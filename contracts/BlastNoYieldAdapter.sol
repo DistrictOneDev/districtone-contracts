@@ -9,7 +9,7 @@ contract BlastNoYieldAdapter is Ownable {
     constructor() Ownable(_msgSender()) {}
 
     function enableClaimable(address gov) public onlyOwner {
-        IBlast(0x4300000000000000000000000000000000000002).configure(IBlast.YieldMode.DISABLED, IBlast.GasMode.CLAIMABLE, gov);
+        IBlast(0x4300000000000000000000000000000000000002).configure(IBlast.YieldMode.VOID, IBlast.GasMode.CLAIMABLE, gov);
         IBlastPoints(0x2536FE9ab3F511540F2f9e2eC2A805005C3Dd800).configurePointsOperator(gov);
     }
 }

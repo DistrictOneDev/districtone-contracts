@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.21;
 
 import {Erc20Utils, IERC20} from "../common/Erc20Utils.sol";
 import "../BlastAdapter.sol";
@@ -35,7 +35,7 @@ contract TokenVault is BlastAdapter {
         bytes calldata signature
     ) external verifySig(token, amount, 0, TokenVaultSignLib.SIGN_FOR_DEPOSIT, signature) {
         // Transfer the tokens from the user to this contract
-        uint256 received = IERC20(token).safeTransferIn(_msgSender(), amount);
+        uint256 received = IERC20(token).safeTransferIn(msg.sender, amount);
         if (amount != received) revert InvalidAmountIn();
 
         // Update the deposited amount for the user and token
@@ -51,11 +51,11 @@ contract TokenVault is BlastAdapter {
         bytes calldata signature
     ) external verifySig(token, amount, nonce, TokenVaultSignLib.SIGN_FOR_WITHDRAW, signature) {
         // Check if the nonce has already been used
-        if(usedNonces[msg.sender][nonce]) revert NonceUsed();
+        if (usedNonces[msg.sender][nonce]) revert NonceUsed();
         usedNonces[msg.sender][nonce] = true;
 
         // Transfer the tokens from this contract to the user
-        IERC20(token).transferOut(_msgSender(), amount);
+        IERC20(token).transferOut(msg.sender, amount);
         withdrawn[msg.sender][token] += amount;
 
         emit Withdrawn(msg.sender, token, amount);
@@ -68,9 +68,15 @@ contract TokenVault is BlastAdapter {
     }
 
     // Modifier to verify the signature before executing the function
-    modifier verifySig(address token, uint256 amount, uint256 nonce, uint256 signType, bytes calldata signature) {
+    modifier verifySig(
+        address token,
+        uint256 amount,
+        uint256 nonce,
+        uint256 signType,
+        bytes calldata signature
+    ) {
         // Create a SignedData struct with the provided parameters
-        TokenVaultSignLib.SignedData memory signedData = TokenVaultSignLib.SignedData(token, _msgSender(), amount, nonce, signType);
+        TokenVaultSignLib.SignedData memory signedData = TokenVaultSignLib.SignedData(token, msg.sender, amount, nonce, signType);
         // Verify the signature
         if (!signedData.verify(signature, issuerAddress)) revert InvalidSignature();
         _;

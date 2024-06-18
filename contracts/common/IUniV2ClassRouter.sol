@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 interface IUniV2ClassRouter {
-
     function factory() external pure returns (address);
 
     function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) external pure returns (uint256 amountOut);
@@ -15,12 +14,7 @@ interface IUniV2ClassRouter {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapExactETHForTokens(
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external payable returns (uint[] memory amounts);
+    function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts);
 
     function addLiquidity(
         address tokenA,
@@ -41,5 +35,4 @@ interface IUniV2ClassRouter {
         address to,
         uint deadline
     ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
-
 }

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.21;
 
 import {IFairLauncher} from "./interface/IFairLauncher.sol";
 import {IAirdropper} from "./interface/IAirdropper.sol";
@@ -57,12 +57,7 @@ contract Airdropper is BlastAdapter, IAirdropper {
      * @param _releaseStartAt Release start time for the airdrop.
      * @param _releaseEndAt Release end time for the airdrop.
      */
-    function createAirdrop(
-        address _token,
-        uint256 _amount,
-        uint256 _releaseStartAt,
-        uint256 _releaseEndAt
-    ) external override {
+    function createAirdrop(address _token, uint256 _amount, uint256 _releaseStartAt, uint256 _releaseEndAt) external override {
         if (_msgSender() != fairLauncher) revert OnlyFairLauncher();
         if (_releaseStartAt < block.timestamp || _releaseStartAt >= _releaseEndAt) revert InvalidTime();
         Airdrop storage airdrop = airdrops[_token];
@@ -86,12 +81,7 @@ contract Airdropper is BlastAdapter, IAirdropper {
      * @param _total The total amount of tokens in the tranche.
      * @param _startTime The start time for claiming tokens in the tranche.
      */
-    function newTranche(
-        address _token,
-        uint256 _total,
-        uint256 _startTime,
-        bytes32 _merkleRoot
-    ) external override {
+    function newTranche(address _token, uint256 _total, uint256 _startTime, bytes32 _merkleRoot) external override {
         if (_msgSender() != executor) revert OnlyExecutor();
         if (_startTime < block.timestamp) revert InvalidTime();
 
@@ -115,12 +105,7 @@ contract Airdropper is BlastAdapter, IAirdropper {
      * @param _amounts Array of amounts to claim from each tranche.
      * @param _merkleProofs Array of merkle proofs for each claim.
      */
-    function claims(
-        address _token,
-        uint256[] calldata _trancheIds,
-        uint256[] calldata _amounts,
-        bytes32[][] calldata _merkleProofs
-    ) external override {
+    function claims(address _token, uint256[] calldata _trancheIds, uint256[] calldata _amounts, bytes32[][] calldata _merkleProofs) external override {
         uint256 len = _trancheIds.length;
         if (len == 0 || len != _amounts.length || len != _merkleProofs.length) revert InvalidParam();
 
@@ -139,7 +124,7 @@ contract Airdropper is BlastAdapter, IAirdropper {
 
     function setExecutor(address _executor) external override onlyOwner {
         if (_executor == address(0)) revert ZeroAddress();
-         executor = _executor;
+        executor = _executor;
     }
 
     /**
@@ -162,7 +147,7 @@ contract Airdropper is BlastAdapter, IAirdropper {
      */
     function _claim(address _token, uint256 _trancheId, uint256 _amount, bytes32[] calldata _merkleProof) internal returns (uint256 amount) {
         Tranche storage tranche = tranches[_token][_trancheId];
-        if (block.timestamp < tranche.startTime) revert NotStarted();
+        if (tranche.startTime == 0 || block.timestamp < tranche.startTime) revert NotStarted();
         if (claimed[_token][_trancheId][_msgSender()] > 0) revert AlreadyClaimed();
         if (_amount > tranche.total - tranche.claimed) revert ExceedsMaximum();
         if (_amount == 0 || !_verifyMerkle(_msgSender(), tranche.merkleRoot, _amount, _merkleProof)) revert InvalidParam();
@@ -195,10 +180,10 @@ contract Airdropper is BlastAdapter, IAirdropper {
      * @return releasable The amount of tokens that can be released.
      */
     function _releasable(uint256 total, uint256 startTime, uint256 endTime) internal view returns (uint256 releasable) {
-        if (block.timestamp > endTime) {
+        if (block.timestamp >= endTime) {
             return total;
         } else {
-            return (block.timestamp - startTime) * total / (endTime - startTime);
+            return ((block.timestamp - startTime) * total) / (endTime - startTime);
         }
     }
 }

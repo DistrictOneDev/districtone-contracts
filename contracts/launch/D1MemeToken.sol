@@ -5,7 +5,6 @@ import {ERC20} from "@openzeppelin-5/contracts/token/ERC20/ERC20.sol";
 import {BlastNoYieldAdapter} from "../BlastNoYieldAdapter.sol";
 
 contract D1MemeToken is BlastNoYieldAdapter, ERC20 {
-
     error Initialized();
 
     bool private _initialized;
@@ -15,12 +14,7 @@ contract D1MemeToken is BlastNoYieldAdapter, ERC20 {
 
     constructor() ERC20("", "") {}
 
-    function initialize(
-        uint256 _initTotalSupply,
-        string calldata tokenName,
-        string calldata tokenSymbol,
-        address _gasOperator
-    ) external onlyOwner {
+    function initialize(uint256 _initTotalSupply, string calldata tokenName, string calldata tokenSymbol, address _gasOperator) external onlyOwner {
         if (_initialized) revert Initialized();
         _mint(_msgSender(), _initTotalSupply);
         _name = tokenName;

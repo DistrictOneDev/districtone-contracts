@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.21;
 
 library SignatureLib {
     struct SignedData {
@@ -15,6 +15,7 @@ library SignatureLib {
         bytes32 message = prefixed(dataHash);
 
         address signer = recoverSigner(message, signature);
+        require(signer != address(0), "invalid signature");
         return signer == issuerAddress;
     }
 

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.21;
 
 import {IFairLauncher} from "./interface/IFairLauncher.sol";
 import {IAirdropper} from "./interface/IAirdropper.sol";
@@ -9,13 +9,13 @@ import {IUniV2ClassRouter} from "../common/IUniV2ClassRouter.sol";
 import {IUniV2ClassFactory} from "../common/IUniV2ClassFactory.sol";
 import {Erc20Utils, IERC20} from "../common/Erc20Utils.sol";
 import {LaunchSignLib} from "../libraries/LaunchSignLib.sol";
-import {BlastNoYieldAdapter} from "../BlastNoYieldAdapter.sol";
+import {BlastAdapter} from "../BlastAdapter.sol";
 
 /**
  * @title FairLauncher Contract
  * @dev Manages the presale and launch process for multiple tokens. It handles ETH contributions, refunds, token claims, and liquidity provisioning for new token launches.
  */
-contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
+contract FairLauncher is IFairLauncher, BlastAdapter {
     using Erc20Utils for IERC20;
     using LaunchSignLib for LaunchSignLib.SignedData;
 
@@ -34,6 +34,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
     SignCfg public signCfg; // Configuration for signatures.
     OLESwapCfg public oleSwapCfg; // Configuration for OLE token swaps.
     SuspendCfg public suspendCfg; // Configuration for suspending various operations.
+    uint256 public constant MAX_PRESALE_PERIOD = 21 days;
 
     struct TokenLaunch {
         uint256 totalRaised; // Total ETH raised during the presale.
@@ -73,11 +74,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
      * @param _executor Address authorized to execute specific functions.
      * @param _spaceShare Address of the SpaceShare contract.
      */
-    constructor(
-        address _weth,
-        address _executor,
-        address _spaceShare
-    ) {
+    constructor(address _weth, address _executor, address _spaceShare) {
         WETH = _weth;
         executor = _executor;
         spaceShare = ISpaceShare(_spaceShare);
@@ -107,12 +104,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
         // Send token to airdropper contract
         if (_tokenomicsCfg.amtForAirdrop > 0) {
             IERC20(token).safeApprove(address(airdropper), _tokenomicsCfg.amtForAirdrop);
-            airdropper.createAirdrop(
-                token,
-                _tokenomicsCfg.amtForAirdrop,
-                _presaleCfg.endTime,
-                _presaleCfg.endTime + _tokenomicsCfg.airdropDuration
-            );
+            airdropper.createAirdrop(token, _tokenomicsCfg.amtForAirdrop, _presaleCfg.endTime, _presaleCfg.endTime + _tokenomicsCfg.airdropDuration);
         }
 
         // Create space
@@ -128,17 +120,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
         presaleCfgs[token] = _presaleCfg;
         tokenomicsCfgs[token] = _tokenomicsCfg;
 
-        emit LaunchCreated(
-            token,
-            spaceIdx,
-            _msgSender(),
-            _tokenCfg.totalSupply,
-            _tokenCfg.name,
-            _tokenCfg.symbol,
-            _presaleCfg,
-            _tokenomicsCfg,
-            createOLEFees
-        );
+        emit LaunchCreated(token, spaceIdx, _msgSender(), _tokenCfg.totalSupply, _tokenCfg.name, _tokenCfg.symbol, _presaleCfg, _tokenomicsCfg, createOLEFees);
     }
 
     /**
@@ -195,8 +177,8 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
         if (tokenLaunches[_token].totalRaised >= presaleCfgs[_token].softCap) revert AlreadyLaunched();
 
         UserParticipation storage userPart = participation[_token][_msgSender()];
-        if(userPart.ethPaid == 0) revert ZeroAmount();
-        if(userPart.refunded) revert AlreadyRefund();
+        if (userPart.ethPaid == 0) revert ZeroAmount();
+        if (userPart.refunded) revert AlreadyRefund();
 
         userPart.refunded = true;
         tokenLaunches[_token].totalRefunded += userPart.ethPaid;
@@ -223,7 +205,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
         UserParticipation storage userPart = participation[_token][_msgSender()];
         if (userPart.reserved) revert AlreadyReserved();
         TokenomicsCfg memory tokenomicsCfg = tokenomicsCfgs[_token];
-        if(tokenomicsCfg.amtForFreeClaim == 0) revert ZeroAmount();
+        if (tokenomicsCfg.amtForFreeClaim == 0) revert ZeroAmount();
 
         if (
             block.timestamp > presaleCfgs[_token].endTime ||
@@ -267,11 +249,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
      * @param _dexRouter Address of the DEX router.
      * @param _minBoughtOle Minimum amount of OLE tokens to receive when swapping ETH for OLE as part of the invite reward process.
      */
-    function launch(
-        address _token,
-        address _dexRouter,
-        uint256 _minBoughtOle
-    ) external override {
+    function launch(address _token, address _dexRouter, uint256 _minBoughtOle) external override {
         if (_msgSender() != executor) revert OnlyExecutor();
         PresaleCfg memory presaleCfg = presaleCfgs[_token];
         if (block.timestamp <= presaleCfg.endTime) revert NotEnded();
@@ -282,7 +260,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
         if (!supportedDexRouters[_dexRouter]) revert UnsupportedDex();
 
         uint256 ethForLaunch = tokenLaunch.totalRaised > presaleCfg.hardCap ? presaleCfg.hardCap : tokenLaunch.totalRaised;
-        uint256 ethForProtocolFee = ethForLaunch * feesCfg.launchProtocolFees / PERCENT_DIVISOR;
+        uint256 ethForProtocolFee = (ethForLaunch * feesCfg.launchProtocolFees) / PERCENT_DIVISOR;
         uint256 ethForLp = ethForLaunch - ethForProtocolFee - tokenLaunch.totalForInvite;
         tokenLaunch.isLaunched = true;
 
@@ -401,7 +379,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
      * @notice Checks if the token launch is complete.
      * @return True if the token launch is complete, false otherwise.
      */
-    function launched(address _token) external override view returns(bool) {
+    function launched(address _token) external view override returns (bool) {
         return tokenLaunches[_token].isLaunched;
     }
 
@@ -411,15 +389,12 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
      * @param _presaleCfg Configuration for the presale.
      * @param _tokenomicsCfg Configuration for token tokenomics.
      */
-    function _validateConf(
-        TokenCfg calldata _tokenCfg,
-        PresaleCfg calldata _presaleCfg,
-        TokenomicsCfg calldata _tokenomicsCfg
-    ) internal view {
+    function _validateConf(TokenCfg calldata _tokenCfg, PresaleCfg calldata _presaleCfg, TokenomicsCfg calldata _tokenomicsCfg) internal view {
         if (_tokenCfg.totalSupply == 0 || bytes(_tokenCfg.name).length == 0 || bytes(_tokenCfg.symbol).length == 0) revert InvalidTokenCfg();
 
         // Validate presale time config
         if (_presaleCfg.startTime < block.timestamp || _presaleCfg.startTime >= _presaleCfg.endTime) revert InvalidTimeCfg();
+        if (_presaleCfg.endTime > block.timestamp + MAX_PRESALE_PERIOD) revert("too much time for selling");
 
         // Validate presale contribution config
         if (
@@ -446,18 +421,13 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
         ) {
             revert InvalidTokenomicsCfg();
         }
-
     }
 
     /**
      * @dev Calculates the additional shares a user can obtain based on their ETH contribution.
      * If the total raised ETH exceeds the maximum launch limit, the function applies an overfunded discount to the excess contribution.
      */
-    function _checkAndCalShare(
-        address _token,
-        PresaleCfg memory presaleCfg,
-        uint256 ethPaid
-    ) internal view returns (ShareCalculation memory) {
+    function _checkAndCalShare(address _token, PresaleCfg memory presaleCfg, uint256 ethPaid) internal view returns (ShareCalculation memory) {
         uint256 newETHPaid = ethPaid + participation[_token][_msgSender()].ethPaid;
         if (newETHPaid < presaleCfg.personalCapMin) revert NotEnough();
         if (newETHPaid > presaleCfg.personalCapMax) revert ExceedsMaximum();
@@ -467,7 +437,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
             // Calculate additional shares considering overfunded
             uint256 totalOverfunded = newTotalRaised - presaleCfg.hardCap;
             uint256 overfundedETH = ethPaid > totalOverfunded ? totalOverfunded : ethPaid;
-            uint256 addShareAmt = (ethPaid - overfundedETH) + (overfundedETH * presaleCfg.overfundedDiscount / PERCENT_DIVISOR);
+            uint256 addShareAmt = (ethPaid - overfundedETH) + ((overfundedETH * presaleCfg.overfundedDiscount) / PERCENT_DIVISOR);
             return ShareCalculation(addShareAmt, overfundedETH);
         } else {
             return ShareCalculation(ethPaid, 0);
@@ -490,12 +460,12 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
 
     function _calInviteFees(address _token, uint256 amount, address directInviter) internal returns (uint256 directFees, uint256 secondTierFees) {
         if (directInviter != ZERO_ADDRESS) {
-            directFees = amount * feesCfg.directInviteFees / PERCENT_DIVISOR;
+            directFees = (amount * feesCfg.directInviteFees) / PERCENT_DIVISOR;
             inviteRewards[_token][directInviter] += directFees;
 
             address secondTierInviter = inviterOf[_token][directInviter];
             if (secondTierInviter != ZERO_ADDRESS) {
-                secondTierFees = amount * feesCfg.secondTierInviteFees / PERCENT_DIVISOR;
+                secondTierFees = (amount * feesCfg.secondTierInviteFees) / PERCENT_DIVISOR;
                 inviteRewards[_token][secondTierInviter] += secondTierFees;
             }
         }
@@ -504,17 +474,18 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
 
     function _calculateClaims(UserParticipation memory userPart, address _token) internal view returns (ClaimableAmt memory) {
         TokenLaunch memory tokenLaunch = tokenLaunches[_token];
-        return ClaimableAmt({
-            presaleClaim: _calPresaleClaim(userPart.shareAmt, tokenomicsCfgs[_token].amtForPresale, tokenLaunch.totalShareAmt),
-            freeClaim: _calFreeClaim(userPart.reserved, tokenomicsCfgs[_token].freeClaimPerUser),
-            oleClaim: _calOLEClaim(inviteRewards[_token][_msgSender()], tokenLaunch.oleRewardForInvite, tokenLaunch.totalForInvite),
-            overfundedRefund: _calOverfundedRefund(userPart.ethPaid, tokenLaunch.totalRaised, presaleCfgs[_token].hardCap)
-        });
+        return
+            ClaimableAmt({
+                presaleClaim: _calPresaleClaim(userPart.shareAmt, tokenomicsCfgs[_token].amtForPresale, tokenLaunch.totalShareAmt),
+                freeClaim: _calFreeClaim(userPart.reserved, tokenomicsCfgs[_token].freeClaimPerUser),
+                oleClaim: _calOLEClaim(inviteRewards[_token][_msgSender()], tokenLaunch.oleRewardForInvite, tokenLaunch.totalForInvite),
+                overfundedRefund: _calOverfundedRefund(userPart.ethPaid, tokenLaunch.totalRaised, presaleCfgs[_token].hardCap)
+            });
     }
 
     function _calPresaleClaim(uint256 shareAmt, uint256 amtForPresale, uint256 totalShareAmt) internal pure returns (uint256) {
         if (shareAmt > 0 && totalShareAmt > 0) {
-            return shareAmt * amtForPresale / totalShareAmt;
+            return (shareAmt * amtForPresale) / totalShareAmt;
         }
         return 0;
     }
@@ -528,7 +499,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
 
     function _calOLEClaim(uint256 inviteReward, uint256 totalOLESwapped, uint256 totalInviteReward) internal pure returns (uint256) {
         if (inviteReward > 0 && totalInviteReward > 0) {
-            return inviteReward * totalOLESwapped / totalInviteReward;
+            return (inviteReward * totalOLESwapped) / totalInviteReward;
         }
         return 0;
     }
@@ -539,7 +510,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
      */
     function _calOverfundedRefund(uint256 ethPaid, uint256 totalRaised, uint256 hardCap) internal pure returns (uint256) {
         if (totalRaised > hardCap) {
-            return ethPaid * (totalRaised - hardCap) / totalRaised;
+            return (ethPaid * (totalRaised - hardCap)) / totalRaised;
         }
         return 0;
     }
@@ -589,12 +560,7 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
         address[] memory path = new address[](2);
         path[0] = WETH;
         path[1] = oleSwapCfg.ole;
-        uint256[] memory amounts = IUniV2ClassRouter(oleSwapCfg.dexRouter).swapExactETHForTokens{value: ethAmount}(
-            minBoughtOle,
-            path,
-            to,
-            block.timestamp
-        );
+        uint256[] memory amounts = IUniV2ClassRouter(oleSwapCfg.dexRouter).swapExactETHForTokens{value: ethAmount}(minBoughtOle, path, to, block.timestamp);
         boughtOleAmount = amounts[1];
     }
 
@@ -606,10 +572,15 @@ contract FairLauncher is IFairLauncher, BlastNoYieldAdapter {
      * @param signType The type of the signature.
      * @param signature The signature to verify.
      */
-    modifier verifySig(address token, address inviter, uint256 timestamp, uint256 signType, bytes calldata signature) {
+    modifier verifySig(
+        address token,
+        address inviter,
+        uint256 timestamp,
+        uint256 signType,
+        bytes calldata signature
+    ) {
         LaunchSignLib.SignedData memory signedData = LaunchSignLib.SignedData(token, _msgSender(), inviter, timestamp, signType);
         if (!signedData.verify(signature, signCfg.issuerAddress, signCfg.validDuration)) revert InvalidSignature();
         _;
     }
-
 }
