@@ -395,7 +395,7 @@ contract FairLauncher is IFairLauncher, BlastAdapter {
 
         // Validate presale time config
         if (_presaleCfg.startTime < block.timestamp || _presaleCfg.startTime >= _presaleCfg.endTime) revert InvalidTimeCfg();
-        if (_presaleCfg.endTime > block.timestamp + MAX_PRESALE_PERIOD) revert("too much time for selling");
+        if (_presaleCfg.endTime > _presaleCfg.startTime + MAX_PRESALE_PERIOD) revert("too much time for selling");
 
         // Validate presale contribution config
         if (
