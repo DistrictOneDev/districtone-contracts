@@ -34,10 +34,10 @@ This contract governs the MEME token used within the District One platform.
 ### `TokenVault.sol`
 This contract is responsible for handling token deposits and withdrawals with signature verification.
 
-![tokens_flow_chart.png](tokens_flow_chart.png)
+![tokens_flow_chart.png](https://github.com/DistrictOneDev/districtone-contracts/blob/main/tokens_flow_chart.png)
 
 ## Audits
-- [ThreeSigma Labs for Meme Labs](https://github.com/OpenLeverageDev/districtone-contracts/blob/main/audits/DistrictOne-MemeLabs-ThreeSigma-June2025)
+- [ThreeSigma Labs for Meme Labs](https://github.com/DistrictOneDev/districtone-contracts/blob/main/audits/DistrictOne-MemeLabs-ThreeSigma-June2025.pdf)
 - [ThreeSigma Labs](https://github.com/OpenLeverageDev/districtone-contracts/blob/main/audits/ThreeSigma-Audit-Report-DistrictOne.pdf)
 - [PeckShield](https://github.com/OpenLeverageDev/districtone-contracts/blob/main/audits/PeckShield-Audit-Report-DistrictOne.pdf)
 
