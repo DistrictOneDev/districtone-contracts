@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import "./MockUniV2Factory.sol";
-import "./MockUniV2Factory.sol";
 import {ERC20} from "@openzeppelin-5/contracts/token/ERC20/ERC20.sol";
 
 contract MockUniV2Router {
