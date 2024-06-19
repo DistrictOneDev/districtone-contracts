@@ -52,6 +52,7 @@ interface IFairLauncher {
         uint256 amtForFreeClaim; // The amount of tokens allocated for free claims.
         uint256 airdropDuration; // The duration for the airdrop period.
         uint256 freeClaimPerUser; // The amount of tokens each user can claim for free.
+        address lpRecipient; // The address where liquidity tokens are sent.
     }
 
     struct FeesCfg {

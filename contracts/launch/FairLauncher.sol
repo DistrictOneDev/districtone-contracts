@@ -265,7 +265,8 @@ contract FairLauncher is IFairLauncher, BlastAdapter {
         tokenLaunch.isLaunched = true;
 
         // Add and burn liquidity
-        uint256 liquidity = _initLiquidity(_token, _dexRouter, tokenomicsCfgs[_token].amtForLP, ethForLp);
+        TokenomicsCfg memory tokenomicsCfg = tokenomicsCfgs[_token];
+        uint256 liquidity = _initLiquidity(_token, _dexRouter, tokenomicsCfg.amtForLP, ethForLp, tokenomicsCfg.lpRecipient);
         address lpTokenAddr = IUniV2ClassFactory(IUniV2ClassRouter(_dexRouter).factory()).getPair(_token, WETH);
 
         // Collect protocol fees
@@ -280,7 +281,7 @@ contract FairLauncher is IFairLauncher, BlastAdapter {
             tokenLaunch.oleAddrForReward = oleSwapCfg.ole;
         }
 
-        emit Launched(_token, lpTokenAddr, liquidity, tokenomicsCfgs[_token].amtForLP, ethForLp, ethForProtocolFee, tokenLaunch.oleRewardForInvite);
+        emit Launched(_token, lpTokenAddr, liquidity, tokenomicsCfg.amtForLP, ethForLp, ethForProtocolFee, tokenLaunch.oleRewardForInvite);
     }
 
     /**
@@ -536,16 +537,23 @@ contract FairLauncher is IFairLauncher, BlastAdapter {
      * @param _dexRouter Address of the DEX router.
      * @param _tokenAmount Amount of tokens to add to the liquidity pool.
      * @param _ethAmount Amount of ETH to add to the liquidity pool.
+     * @param _lpRecipient Address of liquidity tokens are sent.
      * @return liquidity The amount of liquidity tokens received.
      */
-    function _initLiquidity(address _token, address _dexRouter, uint256 _tokenAmount, uint256 _ethAmount) internal returns (uint256 liquidity) {
+    function _initLiquidity(
+        address _token,
+        address _dexRouter,
+        uint256 _tokenAmount,
+        uint256 _ethAmount,
+        address _lpRecipient
+    ) internal returns (uint256 liquidity) {
         IERC20(_token).safeApprove(_dexRouter, _tokenAmount);
         (, , liquidity) = IUniV2ClassRouter(_dexRouter).addLiquidityETH{value: _ethAmount}(
             _token,
             _tokenAmount,
             _tokenAmount, // amountTokenMin: minimum amount of tokens to add (slippage tolerance)
             _ethAmount, // amountETHMin: minimum amount of ETH to add (slippage tolerance)
-            ZERO_ADDRESS, // to: the address that receives the liquidity tokens
+            _lpRecipient, // to: the address that receives the liquidity tokens
             block.timestamp // deadline: timestamp after which the transaction will revert
         );
     }

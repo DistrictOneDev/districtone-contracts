@@ -5,8 +5,8 @@ const {getSign, now, latestBlockTime} = require("./LaunchUtil");
 
 describe("FairLauncher Logic Functions", function () {
     let fairLauncher, spaceShare, airdropper, weth, uniV2Factory, uniV2Router, feesCfg, oleSwapCfg, ole, signConf;
-    let owner, executor, user1, user2, inviter, signer;
-    let ownerStr, executorStr, user1Str, user2Str, inviterStr, signerStr;
+    let owner, executor, user1, user2, inviter, signer, lpRecipient;
+    let ownerStr, executorStr, user1Str, user2Str, inviterStr, signerStr, lpRecipientStr;
 
     const initialSupply = ethers.parseUnits("10000000000", 18);
     const createFees = ethers.parseUnits("1", "ether");
@@ -14,14 +14,27 @@ describe("FairLauncher Logic Functions", function () {
     const hundredEth = ethers.parseUnits("100", "ether");
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+    let tokenomicsCfg;
+
     beforeEach(async function () {
-        [owner, executor, user1, user2, inviter, signer] = await ethers.getSigners();
+        [owner, executor, user1, user2, inviter, signer, lpRecipient] = await ethers.getSigners();
         ownerStr = String(await owner.getAddress());
         executorStr = String(await executor.getAddress());
         user1Str = String(await user1.getAddress());
         user2Str = String(await user2.getAddress());
         inviterStr = String(await inviter.getAddress());
         signerStr = String(await signer.getAddress());
+        lpRecipientStr = String(await lpRecipient.getAddress());
+
+        tokenomicsCfg = {
+            amtForPresale: ethers.parseUnits("3000000000", 18),
+            amtForLP: ethers.parseUnits("4000000000", 18),
+            amtForAirdrop: ethers.parseUnits("2500000000", 18),
+            amtForFreeClaim: ethers.parseUnits("500000000", 18),
+            freeClaimPerUser: ethers.parseUnits("10000000", 18),
+            airdropDuration: 1000,
+            lpRecipient: lpRecipientStr
+        };
         
         const WETH = await ethers.getContractFactory("MockWETH");
         weth = await WETH.deploy();
@@ -88,16 +101,7 @@ describe("FairLauncher Logic Functions", function () {
         symbol: "D1MT"
     };
 
-    const tokenomicsCfg = {
-        amtForPresale: ethers.parseUnits("3000000000", 18),
-        amtForLP: ethers.parseUnits("4000000000", 18),
-        amtForAirdrop: ethers.parseUnits("2500000000", 18),
-        amtForFreeClaim: ethers.parseUnits("500000000", 18),
-        freeClaimPerUser: ethers.parseUnits("10000000", 18),
-        airdropDuration: 1000
-    };
-
-    const launchCreatedEventId = ethers.id("LaunchCreated(address,uint256,address,uint256,string,string,(uint256,uint256,uint256,uint256,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,uint256),uint256)");
+    const launchCreatedEventId = ethers.id("LaunchCreated(address,uint256,address,uint256,string,string,(uint256,uint256,uint256,uint256,uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,uint256,address),uint256)");
 
     describe("newFairLaunch", function () {
         it("should create a new token launch campaign without createFees", async function () {
@@ -116,6 +120,8 @@ describe("FairLauncher Logic Functions", function () {
             expect(launchCreatedEvent.args[1]).to.equal(1);
             expect(launchCreatedEvent.args[2]).to.equal(owner);
             expect(launchCreatedEvent.args[8]).to.equal(0);
+            expect(launchCreatedEvent.args[7].lpRecipient).to.equal(lpRecipientStr);
+            expect((await fairLauncher.tokenomicsCfgs(token)).lpRecipient).to.equal(lpRecipientStr);
         });
 
         it("should create a new token launch campaign with createFees", async function () {
@@ -594,12 +600,19 @@ describe("FairLauncher Logic Functions", function () {
             await fairLauncher.connect(user1).participate(presaleSign[1], presaleSign[0], inviterStr, token, { value: ethers.parseUnits("2", "ether") });
 
             await ethers.provider.send("evm_increaseTime", [1001]);
+
+            const expectEthSupply = ethers.parseUnits("1.86", "ether");
+            const expectTokenSupply = ethers.parseUnits("4000000000", 18);
+            const expectLiquidity = expectEthSupply + expectTokenSupply;
+
             await expect(fairLauncher.connect(executor).launch(token, uniV2Router.getAddress(), 1))
                 .to.emit(fairLauncher, "Launched")
-                .withArgs(token, anyValue, anyValue, tokenomicsCfg.amtForLP, ethers.parseUnits("1.86", "ether"), ethers.parseUnits("0.1", "ether"), 1);
+                .withArgs(token, anyValue, expectLiquidity, expectTokenSupply, expectEthSupply, ethers.parseUnits("0.1", "ether"), 1);
 
             const tokenLaunch = await fairLauncher.tokenLaunches(token);
             expect(tokenLaunch.isLaunched).to.be.true;
+
+            expect(await uniV2Router.lpBalance(lpRecipientStr)).to.equal(expectLiquidity);
 
             const balance = await ethers.provider.getBalance(fairLauncher.getAddress());
             expect(balance).to.equal(ethers.parseUnits("0", "ether"));

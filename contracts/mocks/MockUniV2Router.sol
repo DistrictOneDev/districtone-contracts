@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import "./MockUniV2Factory.sol";
+import "./MockUniV2Factory.sol";
 import {ERC20} from "@openzeppelin-5/contracts/token/ERC20/ERC20.sol";
 
 contract MockUniV2Router {
@@ -10,6 +11,8 @@ contract MockUniV2Router {
     uint256 public minSwapReturn;
 
     uint256 public minTokensForAddLiquidity;
+
+    mapping(address to => uint256) public lpBalance;
 
     function swapExactETHForTokens(
         uint256 minTokens,
@@ -41,6 +44,7 @@ contract MockUniV2Router {
         to;
         deadline;
         require(amountTokenMin >= minTokensForAddLiquidity, "INSUFFICIENT_A_AMOUNT");
+        lpBalance[to] = amountTokenDesired + msg.value;
         return (amountTokenDesired, msg.value, amountTokenDesired + msg.value);
     }
 
