@@ -37,6 +37,7 @@ This contract is responsible for handling token deposits and withdrawals with si
 ![tokens_flow_chart.png](tokens_flow_chart.png)
 
 ## Audits
+- [ThreeSigma Labs for Meme Labs](https://github.com/OpenLeverageDev/districtone-contracts/blob/main/audits/DistrictOne-MemeLabs-ThreeSigma-June2025)
 - [ThreeSigma Labs](https://github.com/OpenLeverageDev/districtone-contracts/blob/main/audits/ThreeSigma-Audit-Report-DistrictOne.pdf)
 - [PeckShield](https://github.com/OpenLeverageDev/districtone-contracts/blob/main/audits/PeckShield-Audit-Report-DistrictOne.pdf)
 
